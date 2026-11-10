@@ -60,6 +60,8 @@ dialog::backdrop{background:#000A}
 .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}#lang{background:var(--bg);border:1px solid #3A3A40;border-radius:10px;padding:8px 10px;min-height:44px;color:var(--tx)}#mic.on{background:var(--red);border-color:var(--red)}
 footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:var(--mu);font-size:14px}
 @media(max-width:860px){main{padding:20px 16px}header{padding:12px 16px}.grid2{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.dg,.tiles{grid-template-columns:1fr!important}}
+.st-Assigned{background:#2A1B4A;color:#B79CFF}
+.leaflet-tooltip{background:#141416;color:#F4F4F5;border:1px solid #5BB5FF}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -74,6 +76,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
     <button data-nav="map">Live Map</button>
     <button data-nav="dashboard" class="adm hide">Dashboard</button>
     <button data-nav="incidents" class="adm hide">Incidents</button>
+    <button data-nav="teams" class="adm hide">Teams</button>
     <button id="login" style="border:1px solid #3A3A40">Admin login</button>
   </nav>
   <div class="tools"><select id="lang" aria-label="Language"><option value="en">English</option><option value="ta">தமிழ்</option><option value="hi">हिन्दी</option></select><span id="net" class="pill Low">Online</span><span id="obq" class="pill Medium hide"></span></div>
@@ -104,7 +107,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
 <section id="v-map" class="view">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
     <div><h1 style="font-size:34px">Live Incident Map</h1><div id="mapcount" style="color:var(--mu)"></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill Low">Low</span><span class="pill Medium">Medium</span><span class="pill High">High</span><span class="pill Critical">Critical</span><span class="pill" style="background:var(--p2);color:var(--mu)">Faded = Resolved</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill Low">Low</span><span class="pill Medium">Medium</span><span class="pill High">High</span><span class="pill Critical">Critical</span><span class="pill" style="background:var(--p2);color:var(--mu)">Faded = Resolved</span><span class="pill" style="background:#0B2A4A;color:#5BB5FF">■ Team</span></div>
   </div>
   <div id="mapmsg" class="err"></div>
   <div id="map" style="height:64vh;min-height:380px;border-radius:14px;border:1px solid var(--bd)"></div>
@@ -148,6 +151,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
         </div>
         <label class="lbl" for="contact">Contact (optional)</label>
         <input id="contact" class="in" maxlength="80" placeholder="Phone or email">
+        <button type="button" class="btn ghost" id="gps" style="margin-top:10px;padding:8px 14px">📍 Use my location</button><span id="gpst" style="margin-left:10px;color:var(--mu);font-size:13px"></span>
         <button class="btn" style="width:100%;margin-top:22px;padding:15px;font-size:16px">Submit emergency report</button>
       </form>
       <div id="done" class="card hide" style="padding:32px;text-align:center">
@@ -168,7 +172,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
   </div>
   <div class="stats" id="stats"></div>
   <div class="dg" style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-top:16px">
-    <div class="card"><h3 style="margin-bottom:16px">Incidents by category</h3><div id="bycat"></div></div>
+    <div class="card"><h3 style="margin-bottom:16px">Incidents by category</h3><div id="donut" style="width:150px;height:150px;border-radius:50%;margin:0 auto 18px;position:relative"><div id="dtot" style="position:absolute;inset:30px;border-radius:50%;background:var(--p);display:grid;place-items:center;font:700 26px 'Space Grotesk'"></div></div><div id="bycat"></div></div>
     <div class="card"><h3 style="margin-bottom:16px">Needs attention</h3><div id="urgent"></div></div>
   </div>
 </section>
@@ -184,6 +188,18 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
   <div id="list"></div>
 </section>
 
+<section id="v-teams" class="view">
+  <h1 style="font-size:34px;margin-bottom:20px">Emergency Response Teams</h1>
+  <div class="grid2" style="gap:24px;align-items:start">
+   <form id="tmform" class="card" novalidate><h3 style="margin-bottom:12px">Add team</h3>
+    <label class="lbl" for="tm-n">Team name</label><input id="tm-n" class="in" maxlength="40" placeholder="Fire Unit Charlie">
+    <label class="lbl" for="tm-c" style="display:block;margin-top:12px">Category</label><select id="tm-c" class="in"></select>
+    <label class="lbl" for="tm-l" style="display:block;margin-top:12px">Current location</label><input id="tm-l" class="in" maxlength="120" placeholder="Street, area, city">
+    <div class="two"><div><label class="lbl" for="tm-la">Latitude</label><input id="tm-la" class="in" type="number" step="any"></div><div><label class="lbl" for="tm-lo">Longitude</label><input id="tm-lo" class="in" type="number" step="any"></div></div>
+    <div class="err" id="e-tm"></div><button class="btn" style="width:100%;margin-top:12px">Save team</button></form>
+   <div id="tlist"></div>
+  </div>
+</section>
 </main>
 <footer>SOSX360 · Emergency Response &amp; Disaster Management Platform · In danger? Call 112</footer>
 
@@ -193,6 +209,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
   <div id="dmeta" style="color:var(--mu);margin:6px 0 16px;font-size:14px"></div>
   <p id="ddesc" style="margin:0 0 16px;line-height:1.6"></p>
   <div class="two" style="margin-bottom:16px"><div><div class="lbl">People affected</div><div id="dppl" style="font:700 30px 'Space Grotesk';color:var(--rl)"></div></div><div><div class="lbl">Contact</div><div id="dcon" style="margin-top:6px"></div></div></div>
+  <div id="asg" style="margin-bottom:16px"></div>
   <div class="lbl">Update status</div>
   <div class="seg" id="seg"></div>
   <div style="display:flex;justify-content:space-between;gap:12px;margin-top:24px;flex-wrap:wrap">
@@ -208,7 +225,7 @@ footer{border-top:1px solid var(--bd);padding:28px 32px;text-align:center;color:
 (function(){
 var CATS={fire:'Fire Emergency',road:'Road Accident',medical:'Medical Emergency',flood:'Flood',collapse:'Building Collapse',other:'Other Emergencies'};
 var BASE={fire:3,collapse:3,medical:2,road:2,flood:2,other:1};
-var SEV=['Low','Medium','High','Critical'],STAT=['Reported','Pending','In Progress','Resolved'];
+var SEV=['Low','Medium','High','Critical'],STAT=['Reported','Assigned','In Progress','Resolved'];
 var KW=['trapped','explosion','unconscious','fatal','dead','bleeding','spreading','collapsed','children','gas leak','not breathing'];
 var KEY='resq:incidents',mem=null,sel=null,cat='',armed=false;
 var $=function(i){return document.getElementById(i)};
@@ -225,12 +242,12 @@ function classify(c,n,t){
 }
 function seed(){
   var n=Date.now(),m=60000;
-  return ll([
+  return lk(ll([
    mk('Warehouse fire, Anna Salai','fire','Heavy smoke and flames on second floor, fire spreading to neighbouring unit.','Anna Salai, Chennai',12,'',n-4*m,'In Progress'),
-   mk('Bus collision on OMR','road','Two vehicles collided, several passengers injured.','OMR, Sholinganallur',8,'98400 00000',n-22*m,'Pending'),
+   mk('Bus collision on OMR','road','Two vehicles collided, several passengers injured.','OMR, Sholinganallur',8,'98400 00000',n-22*m,'Assigned'),
    mk('Cardiac emergency','medical','Elderly man collapsed, not breathing.','T Nagar, Chennai',1,'',n-35*m,'Reported'),
-   mk('Street flooding','flood','Water level rising, vehicles stuck.','Velachery Main Rd',4,'',n-3*60*m,'Pending'),
-   mk('Minor wall crack','other','Compound wall cracked after rain, no injuries.','Adyar, Chennai',0,'',n-9*60*m,'Resolved')]);
+   mk('Street flooding','flood','Water level rising, vehicles stuck.','Velachery Main Rd',4,'',n-3*60*m,'Reported'),
+   mk('Minor wall crack','other','Compound wall cracked after rain, no injuries.','Adyar, Chennai',0,'',n-9*60*m,'Resolved')]));
 }
 function mk(t,c,d,l,p,ct,at,st){var r=classify(c,p,t+' '+d);return{id:'INC-'+(1000+Math.floor(Math.random()*9000)),title:t,cat:c,desc:d,loc:l,ppl:p,contact:ct,sev:r.sev,why:r.why,status:st||'Reported',at:at}}
 var lang='en',tok='',OB=[],fl=false,last=null,voiceUsed=false,rec=null,busy=false,LC={en:'en-IN',ta:'ta-IN',hi:'hi-IN'};
@@ -271,7 +288,13 @@ var D={};
 ['Responders only. Enter the admin password.','மீட்புப் பணியாளர்களுக்கு மட்டும். நிர்வாகி கடவுச்சொல்லை உள்ளிடவும்.','केवल रेस्पॉन्डर के लिए। एडमिन पासवर्ड डालें।'],['Password','கடவுச்சொல்','पासवर्ड'],['Log in','உள்நுழை','लॉग इन'],['Cancel','ரத்து','रद्द करें'],['Incorrect passcode.','தவறான கடவுச்சொல்.','गलत पासवर्ड।'],
 ['Enter the reference number you received after submitting, for example INC-1234.','சமர்ப்பித்த பின் கிடைத்த குறிப்பு எண்ணை உள்ளிடவும், எ.கா. INC-1234.','जमा करने के बाद मिला संदर्भ नंबर डालें, जैसे INC-1234।'],['Reference number','குறிப்பு எண்','संदर्भ नंबर'],['Check status','நிலையைச் சரிபார்','स्थिति जाँचें'],['No report found with that number.','அந்த எண்ணில் புகார் இல்லை.','इस नंबर की कोई रिपोर्ट नहीं मिली।'],
 ['Live Incident Map','நேரலை சம்பவ வரைபடம்','लाइव घटना मैप'],['Faded = Resolved','மங்கல் = தீர்ந்தது','फीका = सुलझा'],
-['affected','பாதிப்பு','प्रभावित'],['mentioned','குறிப்பிடப்பட்டது','उल्लेख'],['min ago','நிமிடம் முன்','मिनट पहले'],['h ago','மணி முன்','घंटे पहले'],['d ago','நாள் முன்','दिन पहले']
+['affected','பாதிப்பு','प्रभावित'],['mentioned','குறிப்பிடப்பட்டது','उल्लेख'],['min ago','நிமிடம் முன்','मिनट पहले'],['h ago','மணி முன்','घंटे पहले'],['d ago','நாள் முன்','दिन पहले'],
+['Teams','குழுக்கள்','टीमें'],['Emergency Response Teams','அவசரகால மீட்புக் குழுக்கள்','आपातकालीन रिस्पॉन्स टीमें'],['Add team','குழுவைச் சேர்','टीम जोड़ें'],['Team name','குழுப் பெயர்','टीम का नाम'],['Current location','தற்போதைய இடம்','वर्तमान स्थान'],['Latitude','அட்சரேகை','अक्षांश'],['Longitude','தீர்க்கரேகை','देशांतर'],['Save team','குழுவைச் சேமி','टीम सहेजें'],
+['Available','கிடைக்கும்','उपलब्ध'],['Busy','பணியில்','व्यस्त'],['Assigned','ஒதுக்கப்பட்டது','असाइन किया'],['Fire','தீயணைப்பு','दमकल'],['Medical','மருத்துவம்','चिकित्सा'],['Rescue','மீட்பு','बचाव'],['Police','காவல்','पुलिस'],
+['Assigned team','ஒதுக்கப்பட்ட குழு','असाइन की गई टीम'],['Assigned incident:','ஒதுக்கப்பட்ட சம்பவம்:','असाइन की गई घटना:'],['Auto-assign nearest team','அருகிலுள்ள குழுவை தானாக ஒதுக்கு','निकटतम टीम स्वतः असाइन करें'],['Assign','ஒதுக்கு','असाइन करें'],['Nearest suitable teams','அருகிலுள்ள பொருத்தமான குழுக்கள்','निकटतम उपयुक्त टीमें'],['No team assigned','குழு ஒதுக்கப்படவில்லை','कोई टीम असाइन नहीं'],['No suitable available team.','பொருத்தமான குழு இல்லை.','कोई उपयुक्त उपलब्ध टीम नहीं।'],
+['Location coordinates unavailable — connect to the internet to locate this address.','இட ஆயத்தொலைவு இல்லை — முகவரியைக் கண்டறிய இணையத்தை இணைக்கவும்.','स्थान निर्देशांक उपलब्ध नहीं — पता खोजने के लिए इंटरनेट जोड़ें।'],
+['Total emergency incidents','மொத்த அவசர சம்பவங்கள்','कुल आपात घटनाएँ'],['Critical incidents','அதிதீவிர சம்பவங்கள்','गंभीर घटनाएँ'],['Available teams','கிடைக்கும் குழுக்கள்','उपलब्ध टीमें'],['Busy teams','பணியிலுள்ள குழுக்கள்','व्यस्त टीमें'],['Assigned incidents','ஒதுக்கப்பட்ட சம்பவங்கள்','असाइन की गई घटनाएँ'],['Resolved incidents','தீர்க்கப்பட்ட சம்பவங்கள்','सुलझी घटनाएँ'],['Response teams','மீட்புக் குழுக்கள்','रिस्पॉन्स टीमें'],
+['Use my location','என் இருப்பிடம்','मेरा स्थान उपयोग करें'],['Team','குழு','टीम'],['Mark available','கிடைக்கும் எனக் குறி','उपलब्ध करें'],['Mark busy','பணியில் எனக் குறி','व्यस्त करें'],['Delete','நீக்கு','हटाएँ'],['Enter the team name.','குழுப் பெயரை உள்ளிடவும்.','टीम का नाम लिखें।']
 ].forEach(function(r){D[r[0]]=[r[1],r[2]]});
 function T(s){
   if(lang==='en'||typeof s!=='string')return s;
@@ -308,7 +331,7 @@ var SPK={
 
 /* ---------- storage + backend sync (offline-first) ---------- */
 function load(){
-  try{var r=localStorage.getItem(KEY);if(r){mem=JSON.parse(r);return}}catch(e){}
+  try{var r=localStorage.getItem(KEY);if(r){mem=JSON.parse(r);mem.forEach(function(i){if(i.status==='Pending')i.status='Assigned'});return}}catch(e){}
   if(!mem){mem=seed();save()}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(mem))}catch(e){}}
@@ -326,15 +349,15 @@ function applyOB(){
   OB.forEach(function(o){
     var id=o.u.split('/')[2];
     if(o.m==='POST'){if(!mem.some(function(i){return i.id===o.b.id}))mem.unshift(o.b)}
-    else if(o.m==='PATCH'){mem.forEach(function(i){if(i.id===id)i.status=o.b.status})}
+    else if(o.m==='PATCH'){mem.forEach(function(i){if(i.id===id){i.status=o.b.status;if(o.b.teamId)i.teamId=o.b.teamId}})}
     else if(o.m==='DELETE'){mem=mem.filter(function(i){return i.id!==id})}
   });
 }
-function rerender(){var v=location.hash.slice(1)||'home';if(v==='home')home();else if(v==='dashboard'&&admin)dash();else if(v==='incidents'&&admin)list();plot()}
+function rerender(){var v=location.hash.slice(1)||'home';if(v==='home')home();else if(v==='dashboard'&&admin)dash();else if(v==='incidents'&&admin)list();else if(v==='teams'&&admin)tlist();plot()}
 function pull(){
   return api('GET','/incidents').then(function(a){
     if(!Array.isArray(a))throw new Error('bad');
-    mem=a;applyOB();save();net(true);rerender();
+    var old=mem;mem=a;mem.forEach(function(i){var o=old.filter(function(x){return x.id===i.id})[0];if(o){if(o.teamId&&!i.teamId)i.teamId=o.teamId;if(typeof o.lat==='number'&&typeof i.lat!=='number'){i.lat=o.lat;i.lng=o.lng}}});applyOB();save();net(true);rerender();
   }).catch(function(){net(navigator.onLine)});
 }
 function flush(){
@@ -348,18 +371,94 @@ function flush(){
 }
 function ago(t){var m=Math.max(1,Math.round((Date.now()-t)/60000));return m<60?m+' '+T('min ago'):m<1440?Math.round(m/60)+' '+T('h ago'):Math.round(m/1440)+' '+T('d ago')}
 
+
+/* ---------- Round 2: priority, teams, assignment ---------- */
+var TM=[],gps=null,TC=['Fire','Medical','Rescue','Police'];
+var SUIT={fire:['Fire','Rescue'],road:['Medical','Rescue','Police'],medical:['Medical'],flood:['Rescue'],collapse:['Rescue','Fire','Medical'],other:['Police','Rescue']};
+var GAZ=[['anna salai',13.0604,80.2496],['anna nagar',13.085,80.2101],['sholinganallur',12.901,80.2279],['t nagar',13.0418,80.2341],['velachery',12.9815,80.218],['adyar',13.0012,80.2565],['egmore',13.0732,80.2609],['guindy',13.0067,80.2206],['mylapore',13.0368,80.2676],['tambaram',12.9249,80.1],['chromepet',12.9516,80.1462],['porur',13.0382,80.1565],['kodambakkam',13.0521,80.2255],['perungudi',12.9653,80.2461],['besant nagar',13.0002,80.2668],['thiruvanmiyur',12.983,80.2594],['nungambakkam',13.0569,80.2425],['vadapalani',13.05,80.2121],['ambattur',13.1143,80.1548],['tondiarpet',13.1263,80.2886],['mahabalipuram',12.6269,80.1927],['chengalpattu',12.6819,79.9888],['omr',12.92,80.23],['chennai',13.0827,80.2707]];
+function offlineGeo(l){l=(l||'').toLowerCase();for(var k=0;k<GAZ.length;k++)if(l.indexOf(GAZ[k][0])>-1)return [GAZ[k][1],GAZ[k][2]];return null}
+function seedT(){return [
+ {id:'T-01',name:'Fire Unit Alpha',cat:'Fire',loc:'Egmore, Chennai',lat:13.0732,lng:80.2609,status:'Busy'},
+ {id:'T-02',name:'Fire Unit Bravo',cat:'Fire',loc:'Guindy, Chennai',lat:13.0067,lng:80.2206,status:'Available'},
+ {id:'T-03',name:'Medic 108-A',cat:'Medical',loc:'Perungudi, Chennai',lat:12.9653,lng:80.2461,status:'Busy'},
+ {id:'T-04',name:'Medic 108-B',cat:'Medical',loc:'Kodambakkam, Chennai',lat:13.0521,lng:80.2255,status:'Available'},
+ {id:'T-05',name:'Rescue Force 1',cat:'Rescue',loc:'Mylapore, Chennai',lat:13.0368,lng:80.2676,status:'Available'},
+ {id:'T-06',name:'Police Patrol 7',cat:'Police',loc:'Adyar, Chennai',lat:13.0063,lng:80.2575,status:'Available'}]}
+function lk(a){a[0].teamId='T-01';a[1].teamId='T-03';return a}
+function loadT(){try{var r=localStorage.getItem('sosx:teams');if(r){TM=JSON.parse(r);return}}catch(e){}TM=seedT();saveT()}
+function saveT(){try{localStorage.setItem('sosx:teams',JSON.stringify(TM))}catch(e){}}
+function teamOf(i){return i.teamId?TM.filter(function(t){return t.id===i.teamId})[0]:null}
+function km(a,b,c,d){var r=Math.PI/180,x=Math.sin((c-a)*r/2),y=Math.sin((d-b)*r/2),h=x*x+Math.cos(a*r)*Math.cos(c*r)*y*y;return 12742*Math.asin(Math.sqrt(h))}
+function distTxt(i,t){if(typeof i.lat!=='number'||typeof t.lat!=='number')return '';var d=km(i.lat,i.lng,t.lat,t.lng);return d.toFixed(1)+' km · ~'+Math.max(1,Math.round(d/35*60))+' min'}
+function score(i){if(i.status==='Resolved')return 0;var m=(Date.now()-i.at)/60000;return Math.round((SEV.indexOf(i.sev)+1)*25+Math.min(+i.ppl||0,50)*.8+Math.min(m,240)*.1+(BASE[i.cat]||1)*5)}
+function cand(i){if(typeof i.lat!=='number')return [];var s=SUIT[i.cat]||SUIT.other;return TM.filter(function(t){return t.status==='Available'&&typeof t.lat==='number'&&s.indexOf(t.cat)>-1}).map(function(t){return{t:t,d:km(i.lat,i.lng,t.lat,t.lng),p:s.indexOf(t.cat)}}).sort(function(a,b){return(a.d+a.p*3)-(b.d+b.p*3)})}
+function relTeam(i){var t=teamOf(i);if(t&&!mem.some(function(x){return x!==i&&x.teamId===t.id&&x.status!=='Resolved'}))t.status='Available';saveT()}
+function setStatus(i,s){i.status=s;var t=teamOf(i);if(t){if(s==='Resolved')relTeam(i);else if(s==='Assigned'||s==='In Progress')t.status='Busy'}save();saveT();q('PATCH','/incidents/'+i.id,{status:s,teamId:i.teamId})}
+function assign(i,t){if(!t)return;i.teamId=t.id;i.status='Assigned';t.status='Busy';save();saveT();q('PATCH','/incidents/'+i.id,{status:i.status,teamId:t.id})}
+function row(i){var t=teamOf(i);return '<button class="inc'+(i.sev==='Critical'?' crit':'')+'" data-id="'+esc(i.id)+'"><div><b>'+esc(i.title)+'</b><div style="color:var(--mu);font-size:13px">'+esc(T(CATS[i.cat]))+' · '+esc(i.loc)+' · '+ago(i.at)+'</div>'+(t?'<div style="font-size:13px;color:#5BB5FF">🚒 '+esc(t.name)+'</div>':'')+'</div><div style="text-align:right"><span class="pill '+i.sev+'">'+i.sev+'</span> <span class="pill" style="background:var(--p2);color:var(--mu)" title="Priority score">⚡ '+score(i)+'</span><div><span class="st st-'+i.status.split(' ')[0]+'">'+i.status+'</span></div></div></button>'}
+function asgDraw(){
+  var t=teamOf(sel),h='<div class="lbl">Assigned team</div>';
+  if(t)h+='<div class="card" style="margin-top:8px;padding:14px"><b>'+esc(t.name)+'</b> · '+esc(t.cat)+'<div style="color:var(--mu);font-size:13px">'+esc(t.loc)+' · '+distTxt(sel,t)+' · '+t.status+'</div></div>';
+  else if(sel.status==='Resolved')h+='<div style="color:var(--mu);margin:8px 0">No team assigned</div>';
+  else{var c=cand(sel);
+    if(typeof sel.lat!=='number')h+='<div class="err">Location coordinates unavailable — connect to the internet to locate this address.</div>';
+    else if(!c.length)h+='<div class="err">No suitable available team.</div>';
+    else h+='<button class="btn" data-a="'+c[0].t.id+'" style="margin:8px 0">Auto-assign nearest team</button><div class="lbl" style="margin-top:6px">Nearest suitable teams</div>'+c.slice(0,3).map(function(x){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)"><span>'+esc(x.t.name)+' <span style="color:var(--mu);font-size:13px">'+esc(x.t.cat)+' · '+x.d.toFixed(1)+' km</span></span><button class="btn ghost" style="min-height:36px;padding:6px 12px" data-a="'+x.t.id+'">Assign</button></div>'}).join('');
+  }
+  $('asg').innerHTML=h;
+}
+$('asg').addEventListener('click',function(e){var b=e.target.closest('[data-a]');if(!b)return;assign(sel,TM.filter(function(t){return t.id===b.dataset.a})[0]);draw();list();dash();plot()});
+function dash(){
+  var op=mem.filter(function(i){return i.status!=='Resolved'}),c=op.filter(function(i){return i.sev==='Critical'}).length,av=TM.filter(function(t){return t.status==='Available'}).length;
+  var S=[['Total emergency incidents',mem.length,''],['Critical incidents',c,'red'],['Active incidents',op.length,''],['Resolved incidents',mem.length-op.length,'color:var(--grn)'],['Available teams',av,'color:var(--grn)'],['Busy teams',TM.length-av,'color:var(--org)'],['Assigned incidents',op.filter(function(i){return i.teamId}).length,'color:#5BB5FF'],['Response teams',TM.length,'']];
+  $('stats').innerHTML=S.map(function(s){var r=s[2]==='red';return '<div class="card stat" style="'+(r?'background:var(--red);border-color:var(--red)':'')+'"><div class="lbl" style="'+(r?'color:#FFE0E3':'')+'">'+s[0]+'</div><b style="'+(r?'':s[2])+'">'+s[1]+'</b></div>'}).join('');
+  var K=Object.keys(CATS),CL=['#E11D2E','#FF9A4D','#5BB5FF','#6EE79A','#FFD04D','#A1A1AA'],N=K.map(function(k){return mem.filter(function(i){return i.cat===k}).length}),tot=mem.length,acc=0,st=[];
+  N.forEach(function(n,k){var a=acc/Math.max(tot,1)*100;acc+=n;st.push(CL[k]+' '+a+'% '+acc/Math.max(tot,1)*100+'%')});
+  $('donut').style.background=tot?'conic-gradient('+st.join(',')+')':'#2A2A2F';$('dtot').textContent=tot;
+  var mx=Math.max.apply(null,N.concat([1]));
+  $('bycat').innerHTML=K.map(function(k,x){return '<div style="display:flex;justify-content:space-between"><span><span style="color:'+CL[x]+'">●</span> '+CATS[k]+'</span><b>'+N[x]+'</b></div><div class="bar"><i style="width:'+(N[x]/mx*100)+'%;background:'+CL[x]+'"></i></div>'}).join('');
+  var u=sorted(op).slice(0,6);
+  $('urgent').innerHTML=u.length?u.map(row).join(''):'<div style="color:var(--mu)">No critical or high incidents open.</div>';
+}
+TC.forEach(function(c){$('tm-c').add(new Option(c,c))});
+function tlist(){
+  $('tlist').innerHTML=TM.map(function(t){var i=mem.filter(function(x){return x.teamId===t.id&&x.status!=='Resolved'})[0];return '<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>'+esc(t.name)+'</b> <span style="color:var(--mu)">'+esc(t.id)+'</span><div style="color:var(--mu);font-size:13px">'+esc(t.cat)+' · '+esc(t.loc)+'</div></div><span class="pill '+(t.status==='Busy'?'High':'Low')+'">'+t.status+'</span></div>'+(i?'<div style="margin-top:8px;font-size:14px">Assigned incident: <b>'+esc(i.title)+'</b> ('+esc(i.id)+')</div>':'')+'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn ghost" data-tg="'+esc(t.id)+'">'+(t.status==='Busy'?'Mark available':'Mark busy')+'</button><button class="btn ghost" data-td="'+esc(t.id)+'" style="color:var(--rl);border-color:#5A1A20">Delete</button></div></div>'}).join('');
+}
+$('tlist').addEventListener('click',function(e){
+  var g=e.target.closest('[data-tg]'),d=e.target.closest('[data-td]');
+  if(g){var t=TM.filter(function(x){return x.id===g.dataset.tg})[0];t.status=t.status==='Busy'?'Available':'Busy'}
+  else if(d){if(!confirm('Delete?'))return;var id=d.dataset.td;TM=TM.filter(function(x){return x.id!==id});mem.forEach(function(i){if(i.teamId===id)delete i.teamId});save()}
+  else return;
+  saveT();tlist();plot();
+});
+$('tmform').addEventListener('submit',function(e){
+  e.preventDefault();var n=$('tm-n').value.trim(),l=$('tm-l').value.trim(),la=parseFloat($('tm-la').value),lo=parseFloat($('tm-lo').value),er=$('e-tm');
+  function add(a,b){TM.push({id:'T-'+String(Date.now()).slice(-5),name:n,cat:$('tm-c').value,loc:l||('GPS '+a.toFixed(3)+', '+b.toFixed(3)),lat:a,lng:b,status:'Available'});saveT();$('tmform').reset();er.textContent='';tlist();plot()}
+  if(n.length<3){er.textContent='Enter the team name.';return}
+  if(!isNaN(la)&&!isNaN(lo)){add(la,lo);return}
+  if(l.length<3){er.textContent='Enter the location.';return}
+  var g=offlineGeo(l);if(g){add(g[0],g[1]);return}
+  if(!navigator.onLine){er.textContent='Offline: enter latitude and longitude.';return}
+  var o={loc:l};geocode(o).then(function(){if(typeof o.lat==='number')add(o.lat,o.lng);else er.textContent='Location not found: enter latitude and longitude.'});
+});
+$('gps').addEventListener('click',function(){
+  if(!navigator.geolocation){$('gpst').textContent='GPS not supported.';return}
+  $('gpst').textContent='…';
+  navigator.geolocation.getCurrentPosition(function(p){gps=[p.coords.latitude,p.coords.longitude];$('gpst').textContent='✓ '+gps[0].toFixed(4)+', '+gps[1].toFixed(4);if(!$('loc').value)$('loc').value='GPS '+gps[0].toFixed(4)+', '+gps[1].toFixed(4)},function(){$('gpst').textContent='Location permission denied.'},{timeout:10000});
+});
+
 /* nav */
-var VIEWS=['home','report','track','map','dashboard','incidents'],admin=false,pending='';
+var VIEWS=['home','report','track','map','dashboard','incidents','teams'],admin=false,pending='';
 try{admin=sessionStorage.getItem('resq:admin')==='1'}catch(e){}
 function go(v){
   if(VIEWS.indexOf(v)<0)v='home';
-  if((v==='dashboard'||v==='incidents')&&!admin){pending=v;$('pass').value='';$('e-pass').textContent='';$('ldlg').showModal();v='home'}
+  if((v==='dashboard'||v==='incidents'||v==='teams')&&!admin){pending=v;$('pass').value='';$('e-pass').textContent='';$('ldlg').showModal();v='home'}
   VIEWS.forEach(function(x){$('v-'+x).classList.toggle('on',x===v)});
   document.querySelectorAll('.adm').forEach(function(b){b.classList.toggle('hide',!admin)});
   $('login').textContent=admin?'Log out':'Admin login';
   if(v==='home'){home();homeMap()}if(v==='map')mapView();
   document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.nav===v)});
-  if(v==='dashboard')dash();if(v==='incidents')list();
+  if(v==='dashboard')dash();if(v==='incidents')list();if(v==='teams')tlist();
   if(location.hash!=='#'+v)location.hash=v;window.scrollTo(0,0);
 }
 document.addEventListener('click',function(e){var b=e.target.closest('[data-nav]');if(b)go(b.dataset.nav)});
@@ -387,7 +486,7 @@ $('form').addEventListener('submit',function(e){
   var p=$('ppl').value;chk('ppl',p===''||isNaN(p)||+p<0||+p%1!==0,'Enter a whole number, 0 or more.');
   if(!ok)return;
   var inc=mk($('title').value.trim(),cat,$('desc').value.trim(),$('loc').value.trim(),+p,$('contact').value.trim(),Date.now(),'Reported');
-  mem.unshift(inc);save();q('POST','/incidents',inc);geocode(inc).then(plot);
+  if(gps){inc.lat=gps[0];inc.lng=gps[1]}else if(!navigator.onLine){var g0=offlineGeo(inc.loc);if(g0){inc.lat=g0[0];inc.lng=g0[1]}}mem.unshift(inc);save();q('POST','/incidents',inc);if(typeof inc.lat!=='number')geocode(inc).then(plot);else plot();gps=null;$('gpst').textContent='';
   $('d-id').textContent=inc.id;$('d-sev').className='pill '+inc.sev;$('d-sev').textContent=inc.sev.toUpperCase();
   $('form').classList.add('hide');$('done').classList.remove('hide');last=inc;if(voiceUsed){say(SPK[lang](inc.id,inc.sev));voiceUsed=false}
 });
@@ -397,7 +496,7 @@ $('again').addEventListener('click',function(){
 });
 
 /* dashboard */
-function dash(){
+function dashOld(){
   var c=mem.filter(function(i){return i.sev==='Critical'&&i.status!=='Resolved'}).length;
   var S=[['Total reported',mem.length,''],['Critical',c,'background:var(--red);border-color:var(--red)'],['Pending',mem.filter(function(i){return i.status==='Pending'}).length,'color:var(--yel)'],['Resolved',mem.filter(function(i){return i.status==='Resolved'}).length,'color:var(--grn)']];
   $('stats').innerHTML=S.map(function(s,k){return '<div class="card stat" style="'+(k===1?s[2]:'')+'"><div class="lbl" style="'+(k===1?'color:#FFE0E3':'')+'">'+s[0]+'</div><b style="'+(k>1?s[2]:'')+'">'+s[1]+'</b></div>'}).join('');
@@ -406,13 +505,13 @@ function dash(){
   var u=sorted(mem.filter(function(i){return i.status!=='Resolved'&&(i.sev==='Critical'||i.sev==='High')})).slice(0,5);
   $('urgent').innerHTML=u.length?u.map(row).join(''):'<div style="color:var(--mu)">No critical or high incidents open.</div>';
 }
-function sorted(a){return a.slice().sort(function(x,y){return SEV.indexOf(y.sev)-SEV.indexOf(x.sev)||y.at-x.at})}
-function row(i){return '<button class="inc'+(i.sev==='Critical'?' crit':'')+'" data-id="'+esc(i.id)+'"><div><b>'+esc(i.title)+'</b><div style="color:var(--mu);font-size:13px">'+esc(T(CATS[i.cat]))+' · '+esc(i.loc)+' · '+ago(i.at)+'</div></div><div style="text-align:right"><span class="pill '+i.sev+'">'+i.sev+'</span><div><span class="st st-'+i.status.split(' ')[0]+'">'+i.status+'</span></div></div></button>'}
+function sorted(a){return a.slice().sort(function(x,y){return score(y)-score(x)||y.at-x.at})}
+function row0(i){return '<button class="inc'+(i.sev==='Critical'?' crit':'')+'" data-id="'+esc(i.id)+'"><div><b>'+esc(i.title)+'</b><div style="color:var(--mu);font-size:13px">'+esc(T(CATS[i.cat]))+' · '+esc(i.loc)+' · '+ago(i.at)+'</div></div><div style="text-align:right"><span class="pill '+i.sev+'">'+i.sev+'</span><div><span class="st st-'+i.status.split(' ')[0]+'">'+i.status+'</span></div></div></button>'}
 
 /* incidents */
 STAT.forEach(function(s){$('f-st').add(new Option(s,s))});SEV.forEach(function(s){$('f-sv').add(new Option(s,s))});Object.keys(CATS).forEach(function(k){$('f-ct').add(new Option(CATS[k],k))});
 ['f-st','f-sv','f-ct'].forEach(function(i){$(i).addEventListener('change',list)});
-$('reset').addEventListener('click',function(){mem=seed();save();list()});
+$('reset').addEventListener('click',function(){mem=seed();TM=seedT();save();saveT();list()});
 function list(){
   var a=sorted(mem).filter(function(i){return(!$('f-st').value||i.status===$('f-st').value)&&(!$('f-sv').value||i.sev===$('f-sv').value)&&(!$('f-ct').value||i.cat===$('f-ct').value)});
   $('list').innerHTML=a.length?a.map(row).join(''):'<div class="card" style="color:var(--mu)">No incidents match these filters.</div>';
@@ -426,19 +525,19 @@ function draw(){
   $('dt').textContent=sel.title;$('dmeta').textContent=sel.loc+' · reported '+ago(sel.at)+' · '+sel.why;
   $('ddesc').textContent=sel.desc;$('dppl').textContent=sel.ppl;$('dcon').textContent=sel.contact||'Not provided';
   $('seg').innerHTML=STAT.map(function(s){return '<button data-s="'+s+'" class="'+(s===sel.status?'on':'')+'">'+s+'</button>'}).join('');
-  $('del').textContent=armed?'Click again to confirm delete':'Delete report';
+  $('del').textContent=armed?'Click again to confirm delete':'Delete report';asgDraw();
 }
-$('seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;sel.status=b.dataset.s;save();q('PATCH','/incidents/'+sel.id,{status:sel.status});draw();list();dash()});
+$('seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setStatus(sel,b.dataset.s);draw();list();dash();plot()});
 $('del').addEventListener('click',function(){
   if(!armed){armed=true;draw();return}
-  q('DELETE','/incidents/'+sel.id);mem=mem.filter(function(i){return i!==sel});save();$('dlg').close();list();dash();
+  q('DELETE','/incidents/'+sel.id);relTeam(sel);mem=mem.filter(function(i){return i!==sel});save();$('dlg').close();list();dash();
 });
 $('close').addEventListener('click',function(){$('dlg').close();list();dash()});
 
 function ll(a){var c=[[13.0604,80.2496],[12.901,80.2279],[13.0418,80.2341],[12.9815,80.218],[13.0012,80.2565]];a.forEach(function(x,k){x.lat=c[k][0];x.lng=c[k][1]});return a}
 var map,layer,geoBusy=false,SC={Low:'#6EE79A',Medium:'#FFD04D',High:'#FF9A4D',Critical:'#E11D2E'};
 function geocode(i){
-  return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(i.loc)).then(function(r){return r.json()}).then(function(a){if(a&&a[0]){i.lat=+a[0].lat;i.lng=+a[0].lon}else{i.nogeo=1};save()}).catch(function(){if(navigator.onLine)i.nogeo=1});
+  return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(i.loc)).then(function(r){return r.json()}).then(function(a){if(a&&a[0]){i.lat=+a[0].lat;i.lng=+a[0].lon}else{i.nogeo=1};save()}).catch(function(){var g=offlineGeo(i.loc);if(g){i.lat=g[0];i.lng=g[1]}else if(navigator.onLine)i.nogeo=1;save()});
 }
 function geoFill(){
   if(geoBusy||!navigator.onLine)return;var t=mem.filter(function(i){return typeof i.lat!=='number'&&!i.nogeo})[0];if(!t)return;
@@ -465,8 +564,11 @@ function plotOn(map,layer,cid){
     m.bindPopup('<b>'+esc(i.title)+'</b><br>'+i.sev+' · '+esc(T(CATS[i.cat]))+'<br>Status: '+i.status+'<br>'+esc(i.loc)+'<br>'+esc(i.ppl)+' affected · '+ago(i.at));
     pts.push([i.lat,i.lng]);
   });
+  var np=pts.length;
+  TM.forEach(function(t){if(typeof t.lat!=='number')return;L.circleMarker([t.lat,t.lng],{radius:8,color:'#5BB5FF',weight:2,fillColor:t.status==='Busy'?'#0B2A4A':'#5BB5FF',fillOpacity:.9}).addTo(layer).bindPopup('<b>'+esc(t.name)+'</b><br>'+esc(t.cat)+' · '+t.status+'<br>'+esc(t.loc));pts.push([t.lat,t.lng])});
+  mem.forEach(function(i){var t=teamOf(i);if(t&&i.status!=='Resolved'&&typeof i.lat==='number'&&typeof t.lat==='number')L.polyline([[t.lat,t.lng],[i.lat,i.lng]],{color:'#5BB5FF',weight:3,dashArray:'8 8'}).addTo(layer).bindTooltip(distTxt(i,t),{permanent:true})});
   if(pts.length&&layer.__n!==pts.length){map.fitBounds(pts,{padding:[40,40],maxZoom:14});layer.__n=pts.length}
-  $(cid).textContent=pts.length+' of '+mem.length+' incidents plotted';
+  $(cid).textContent=np+' of '+mem.length+' incidents plotted · '+TM.length+' teams';
 }
 function home(){
   var open=mem.filter(function(i){return i.status!=='Resolved'}).length,cr=mem.filter(function(i){return i.sev==='Critical'&&i.status!=='Resolved'}).length;
@@ -476,7 +578,7 @@ function home(){
 }
 $('tform').addEventListener('submit',function(e){
   e.preventDefault();var id=$('tid').value.trim().toUpperCase(),i=mem.filter(function(x){return x.id===id})[0];
-  $('tres').innerHTML=i?'<div class="card"><span class="pill '+i.sev+'">'+i.sev+'</span><h3 style="margin:12px 0 4px">'+esc(i.title)+'</h3><div style="color:var(--mu);font-size:14px">'+esc(i.loc)+' · '+ago(i.at)+'</div><div class="seg" style="margin-top:16px">'+STAT.map(function(s){return '<button type="button" disabled class="'+(STAT.indexOf(s)<=STAT.indexOf(i.status)?'on':'')+'">'+s+'</button>'}).join('')+'</div></div>':'<div class="card" style="color:var(--rl)">No report found with that number.</div>';
+  $('tres').innerHTML=i?'<div class="card"><span class="pill '+i.sev+'">'+i.sev+'</span><h3 style="margin:12px 0 4px">'+esc(i.title)+'</h3><div style="color:var(--mu);font-size:14px">'+esc(i.loc)+' · '+ago(i.at)+'</div>'+(teamOf(i)?'<div style="margin-top:8px;color:#5BB5FF">🚒 '+esc(teamOf(i).name)+' · '+distTxt(i,teamOf(i))+'</div>':'')+'<div class="seg" style="margin-top:16px">'+STAT.map(function(s){return '<button type="button" disabled class="'+(STAT.indexOf(s)<=STAT.indexOf(i.status)?'on':'')+'">'+s+'</button>'}).join('')+'</div></div>':'<div class="card" style="color:var(--rl)">No report found with that number.</div>';
 });
 $('login').addEventListener('click',function(){
   if(admin){admin=false;try{sessionStorage.removeItem('resq:admin');sessionStorage.removeItem('sosx:tok')}catch(e){}tok='';pull();go('home')}else{pending='dashboard';$('pass').value='';$('e-pass').textContent='';$('ldlg').showModal()}
@@ -497,17 +599,17 @@ $('mic').addEventListener('click',function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){$('micst').textContent='Voice input is not supported in this browser (use Chrome).';return}
   if(rec){rec.stop();return}
-  rec=new SR();rec.lang=LC[lang];rec.interimResults=false;rec.continuous=false;
+  rec=new SR();rec.lang=LC[lang];if(!navigator.onLine){try{rec.processLocally=true}catch(x){}}rec.interimResults=false;rec.continuous=false;
   $('micst').textContent='Listening\u2026';$('mic').classList.add('on');
   rec.onresult=function(e){
     var t=e.results[0][0].transcript;voiceUsed=true;
     var d=$('desc');d.value=(d.value?d.value+' ':'')+t;
     if(!$('title').value)$('title').value=t.slice(0,60);
     var g=guess(t);if(g&&!cat){var b=document.querySelector('#cats [data-c="'+g+'"]');if(b)b.click()}
-    var m=t.match(/(\d+)\s*(people|persons|person|பேர்|लोग|व्यक्ति)/i);if(m)$('ppl').value=m[1];
+    var m=t.match(/(\d+)\s*(people|persons|person|பேர்|लोग|व्यक्ति)/i);if(m)$('ppl').value=m[1];var lm=t.match(/\b(?:at|near|in|on)\s+([A-Za-z0-9 ,.]{3,50})$/i);if(lm&&!$('loc').value)$('loc').value=lm[1].trim();
     preview();
   };
-  rec.onerror=function(e){$('micst').textContent='Voice error: '+e.error};
+  rec.onerror=function(e){$('micst').textContent='Voice error: '+e.error+(e.error==='language-not-supported'||e.error==='network'?' — install the offline speech pack for this language in Chrome, or type instead.':'')};
   rec.onend=function(){rec=null;$('mic').classList.remove('on');if($('micst').textContent.indexOf('Listening')===0)$('micst').textContent=''};
   rec.start();
 });
@@ -515,7 +617,7 @@ $('speak').addEventListener('click',function(){if(last)say(SPK[lang](last.id,las
 $('voicego').addEventListener('click',function(){go('report');$('mic').click()});
 window.addEventListener('online',function(){net(true);flush()});
 window.addEventListener('offline',function(){net(false)});
-load();saveOB();preview();go(location.hash.slice(1)||'home');tr();obs();net(navigator.onLine);flush();setInterval(flush,15000);
+load();loadT();saveOB();preview();go(location.hash.slice(1)||'home');tr();obs();net(navigator.onLine);flush();setInterval(flush,15000);
 if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
 })();
 </script>
